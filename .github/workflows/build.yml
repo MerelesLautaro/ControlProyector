@@ -10,23 +10,35 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # used to cache dependencies with a timeout
-      - name: Get Date
-        id: get-date
+      - name: Install Android SDK tools
         run: |
-          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
+          sudo apt-get update
+          sudo apt-get install -y openjdk-8-jdk
+          wget https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip -O android-sdk.zip
+          unzip android-sdk.zip -d android-sdk
+          export ANDROID_SDK_ROOT=$PWD/android-sdk
+          echo "export ANDROID_SDK_ROOT=$PWD/android-sdk" >> $GITHUB_ENV
+          yes | $ANDROID_SDK_ROOT/tools/bin/sdkmanager --licenses
+          $ANDROID_SDK_ROOT/tools/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install Buildozer
+        run: pip install buildozer
 
       - name: Cache Buildozer global directory
         uses: actions/cache@v2
         with:
           path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }} # Replace with your path
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
       - uses: actions/cache@v2
         with:
           path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
